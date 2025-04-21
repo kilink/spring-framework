@@ -146,21 +146,20 @@ public class ControlFlowPointcut implements Pointcut, ClassFilter, MethodMatcher
 	@Override
 	public boolean matches(Method method, Class<?> targetClass, @Nullable Object... args) {
 		incrementEvaluationCount();
-
-		for (StackTraceElement element : new Throwable().getStackTrace()) {
-			if (element.getClassName().equals(this.clazz.getName())) {
-				if (this.methodNamePatterns.isEmpty()) {
-					return true;
-				}
-				String methodName = element.getMethodName();
-				for (int i = 0; i < this.methodNamePatterns.size(); i++) {
-					if (isMatch(methodName, i)) {
-						return true;
-					}
-				}
-			}
-		}
-		return false;
+		return StackWalker.getInstance().walk(s ->
+			s.filter(frame -> frame.getClassName().equals(this.clazz.getName()))
+					.anyMatch(frame -> {
+						if (this.methodNamePatterns.isEmpty()) {
+							return true;
+						}
+						String methodName = frame.getMethodName();
+						for (int i = 0; i < this.methodNamePatterns.size(); i++) {
+							if (isMatch(methodName, i)) {
+								return true;
+							}
+						}
+						return false;
+					}));
 	}
 
 	/**
